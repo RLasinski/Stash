@@ -70,6 +70,10 @@ class Xcache implements DriverInterface
      */
     public function getData($key)
     {
+        if ($this->isCommandLineMode()) {
+            return false;
+        }
+
         $keyString = $this->makeKey($key);
         if (!$keyString) {
             return false;
@@ -98,6 +102,10 @@ class Xcache implements DriverInterface
      */
     public function storeData($key, $data, $expiration)
     {
+        if ($this->isCommandLineMode()) {
+            return false;
+        }
+
         $keyString = $this->makeKey($key);
         if (!$keyString) {
             return false;
@@ -117,6 +125,10 @@ class Xcache implements DriverInterface
      */
     public function clear($key = null)
     {
+        if ($this->isCommandLineMode()) {
+            return false;
+        }
+
         if ($key === null) {
             $key = array();
         }
@@ -145,7 +157,7 @@ class Xcache implements DriverInterface
      */
     public static function isAvailable()
     {
-        return (extension_loaded('xcache') && php_sapi_name() !== 'cli');
+        return extension_loaded('xcache');
     }
 
     /**
@@ -178,5 +190,13 @@ class Xcache implements DriverInterface
         $life = $expiration - time(true);
 
         return $this->ttl > $life ? $this->ttl : $life;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function isCommandLineMode()
+    {
+        return php_sapi_name() === 'cli';
     }
 }
