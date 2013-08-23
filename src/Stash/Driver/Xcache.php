@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -25,27 +24,32 @@ use Stash\Interfaces\DriverInterface;
  */
 class Xcache implements DriverInterface
 {
+    /**
+     * @var int
+     */
     protected $ttl = 300;
-    protected $user;
-    protected $password;
 
+    /**
+     * @var string
+     */
+    protected $namespace;
+
+    /**
+     * @param array $options
+     *
+     * @throws \Stash\Exception\RuntimeException
+     */
     public function __construct(array $options = array())
     {
         if (!static::isAvailable()) {
             throw new RuntimeException('Extension is not installed.');
         }
 
-        if (isset($options['user'])) {
-            $this->user = $options['user'];
-        }
-
-        if (isset($options['password'])) {
-            $this->password = $options['password'];
-        }
-
         if (isset($options['ttl']) && is_numeric($options['ttl'])) {
             $this->ttl = (int) $options['ttl'];
         }
+
+        $this->namespace = isset($options['namespace']) ? $options['namespace'] : md5(__FILE__);
     }
 
     /**
@@ -86,35 +90,36 @@ class Xcache implements DriverInterface
      * stored. This function needs to store that data in such a way that it can be retrieved exactly as it was sent. The
      * expiration time needs to be stored with this data.
      *
-     * @param  array $data
-     * @param  int   $expiration
+     * @param array $key
+     * @param array $data
+     * @param int   $expiration
+     *
      * @return bool
      */
     public function storeData($key, $data, $expiration)
     {
-        $keyString = self::makeKey($key);
+        $keyString = $this->makeKey($key);
         if (!$keyString) {
             return false;
         }
 
         $cacheTime = $this->getCacheTime($expiration);
 
-        return xcache_set($keyString, serialize(array('return' => $data, 'expiration' => $expiration)), $cacheTime);
+        return xcache_set($keyString, serialize(array('data' => $data, 'expiration' => $expiration)), $cacheTime);
     }
 
     /**
      * This function should clear the cache tree using the key array provided. If called with no arguments the entire
      * cache needs to be cleared.
      *
-     * @param  null|array $key
+     * @param  array $key
      * @return bool
      */
     public function clear($key = null)
     {
-        if (isset($key)) {
+        if ($key === null) {
             $key = array();
         }
-
         $keyString = $this->makeKey($key);
         if (!$keyString) {
             return false;
@@ -131,56 +136,6 @@ class Xcache implements DriverInterface
     public function purge()
     {
         return $this->clear();
-
-        /*
-
-                // xcache loses points for its login choice, but not as many as it gained for xcache_unset_by_prefix
-                $original = array();
-                if (isset($_SERVER['PHP_AUTH_USER'])) {
-                    $original['PHP_AUTH_USER'] = $_SERVER['PHP_AUTH_USER'];
-                    unset($_SERVER['PHP_AUTH_USER']);
-                }
-
-                if (isset($_SERVER['PHP_AUTH_PW'])) {
-                    $original['PHP_AUTH_PW'] = $_SERVER['PHP_AUTH_PW'];
-                    unset($_SERVER['PHP_AUTH_USER']);
-                }
-
-                if(isset($this->user))
-                    $_SERVER['PHP_AUTH_USER'] = $this->user;
-
-                if(isset($this->password))
-                    $_SERVER['PHP_AUTH_PW'] = $this->password;
-
-                if (isset($key) && function_exists('xcache_unset_by_prefix')) {
-                    $keyString = self::makeKey($key);
-                    if ($keyString = self::makeKey($key)) {
-                        // this is such a sexy function, soooo many points to xcache
-                        $return = xcache_unset_by_prefix($keyString);
-                    } else {
-                        return false;
-                    }
-                } else {
-                    xcache_clear_cache(XC_TYPE_VAR, 0);
-                    $return = true;
-                }
-
-                if (isset($original['PHP_AUTH_USER'])) {
-                    $_SERVER['PHP_AUTH_USER'] = $original['PHP_AUTH_USER'];
-                } elseif (isset($_SERVER['PHP_AUTH_USER'])) {
-                    unset($_SERVER['PHP_AUTH_USER']);
-                }
-
-                if (isset($original['PHP_AUTH_PW'])) {
-                    $_SERVER['PHP_AUTH_PW'] = $original['PHP_AUTH_PW'];
-                } elseif (isset($_SERVER['PHP_AUTH_PW'])) {
-                    unset($_SERVER['PHP_AUTH_PW']);
-                }
-
-                return $return;
-
-        */
-
     }
 
     /**
@@ -190,6 +145,38 @@ class Xcache implements DriverInterface
      */
     public static function isAvailable()
     {
-        return extension_loaded('xcache') && 'cli' !== php_sapi_name();
+        return extension_loaded('xcache');
+    }
+
+    /**
+     * @param array $key
+     *
+     * @return string
+     */
+    protected function makeKey($key)
+    {
+        $keyString = md5(__FILE__) . '::'; // make it unique per install
+
+        if (isset($this->namespace)) {
+            $keyString .= $this->namespace . '::';
+        }
+
+        foreach ($key as $piece) {
+            $keyString .= $piece . '::';
+        }
+
+        return $keyString;
+    }
+
+    /**
+     * @param $expiration
+     *
+     * @return int
+     */
+    protected function getCacheTime($expiration)
+    {
+        $life = $expiration - time(true);
+
+        return $this->ttl > $life ? $this->ttl : $life;
     }
 }
