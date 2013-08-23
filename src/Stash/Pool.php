@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -28,7 +27,7 @@ class Pool implements PoolInterface
      * The cacheDriver being used by the system. While this class handles all of the higher functions, it's the cache
      * driver here that handles all of the storage/retrieval functionality. This value is set by the constructor.
      *
-     * @var Stash\Interfaces\DriverInterface
+     * @var \Stash\Interfaces\DriverInterface
      */
     protected $driver;
 
@@ -39,7 +38,7 @@ class Pool implements PoolInterface
      * If set various then errors and exceptions will get passed to the PSR Compliant logging library. This
      * can be set using the setLogger() function in this class.
      *
-     * @var Psr\Log\LoggerInterface
+     * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -62,10 +61,11 @@ class Pool implements PoolInterface
      * Takes the same arguments as the Stash->setupKey() function and returns with a new Stash object. If a driver
      * has been set for this class then it is used, otherwise the Stash object will be set to use script memory only.
      *
-     * @example $cache = $pool->getItem('permissions', 'user', '4', '2');
+     * @example  $cache = $pool->getItem('permissions', 'user', '4', '2');
      *
-     * @param  string|array                   $key, $key, $key...
-     * @return \Stash\Interaces\ItemInterface
+     * @throws \InvalidArgumentException
+     * @internal param array|string $key , $key, $key...
+     * @return \Stash\Interfaces\ItemInterface
      */
     public function getItem()
     {
