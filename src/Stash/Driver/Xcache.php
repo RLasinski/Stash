@@ -145,7 +145,7 @@ class Xcache implements DriverInterface
      */
     public static function isAvailable()
     {
-        return extension_loaded('xcache');
+        return (extension_loaded('xcache') && php_sapi_name() !== 'cli');
     }
 
     /**
