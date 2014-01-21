@@ -50,6 +50,9 @@ class FileSystem implements DriverInterface
      */
     protected $memStore = array();
 
+    /**
+     * @var int
+     */
     protected $memStoreLimit;
 
     /**
@@ -60,12 +63,29 @@ class FileSystem implements DriverInterface
      */
     protected $cachePath;
 
+    /**
+     * @var int
+     */
     protected $filePermissions;
+
+    /**
+     * @var int
+     */
     protected $dirPermissions;
+
+    /**
+     * @var int
+     */
     protected $directorySplit;
 
+    /**
+     * @var bool
+     */
     protected $disabled = false;
 
+    /**
+     * @var array
+     */
     protected $defaultOptions = array('filePermissions' => 0660,
                                       'dirPermissions' => 0770,
                                       'dirSplit' => 2,
@@ -73,6 +93,11 @@ class FileSystem implements DriverInterface
                                       'keyHashFunction' => 'md5'
     );
 
+    /**
+     * @param array $options
+     *
+     * @throws \Stash\Exception\RuntimeException
+     */
     public function __construct(array $options = array())
     {
         $options = array_merge($this->defaultOptions, $options);
@@ -106,12 +131,16 @@ class FileSystem implements DriverInterface
 
     /**
      * Empty destructor to maintain a standardized interface across all drivers.
-     *
      */
     public function __destruct()
     {
     }
 
+    /**
+     * @param $key
+     *
+     * @return string
+     */
     protected function makeKeyString($key)
     {
         $keyString = '';
@@ -126,6 +155,8 @@ class FileSystem implements DriverInterface
      * This function retrieves the data from the file. If the file doesn't exist, or is currently being written to, it
      * will return false. If the file is already being written to, this instance of the driver gets disabled so as not
      * to have a bunch of writes get queued up when a cache item fails to hit.
+     *
+     * @param array $key
      *
      * @return bool
      */
@@ -164,7 +195,6 @@ class FileSystem implements DriverInterface
         return false;
     }
 
-
     /**
      * This function takes the data and stores it to the path specified. If the directory leading up to the path does
      * not exist, it creates it.
@@ -172,6 +202,8 @@ class FileSystem implements DriverInterface
      * @param  array $key
      * @param  array $data
      * @param  int   $expiration
+     *
+     * @throws \Stash\Exception\WindowsPathMaxLengthException
      * @return bool
      */
     public function storeData($key, $data, $expiration)
@@ -255,7 +287,9 @@ class FileSystem implements DriverInterface
      * of the array as a directory (after putting the element through md5(), which was the most efficient way to make
      * sure it was filesystem safe). The last element of the array gets a php extension attached to it.
      *
-     * @param  array  $key Null arguments return the base directory.
+     * @param  array $key Null arguments return the base directory.
+     *
+     * @throws \Stash\Exception\LogicException
      * @return string
      */
     protected function makePath($key = null)
@@ -384,7 +418,6 @@ class FileSystem implements DriverInterface
 
     /**
      * Checks to see whether the requisite permissions are available on the specified path.
-     *
      */
     protected function checkFileSystemPermissions()
     {
@@ -415,5 +448,4 @@ class FileSystem implements DriverInterface
     {
         return true;
     }
-
 }

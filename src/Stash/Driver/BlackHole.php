@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
 *
@@ -8,7 +7,6 @@
 * For the full copyright and license information, please view the LICENSE
 * file that was distributed with this source code.
 */
-
 namespace Stash\Driver;
 
 use Stash\Interfaces\DriverInterface;
@@ -20,13 +18,19 @@ use Stash\Interfaces\DriverInterface;
  */
 class BlackHole implements DriverInterface
 {
-
     /**
      * NOOP constructor
      */
     public function __construct(array $options = array())
     {
         // empty
+    }
+
+    /**
+     * Empty destructor to maintain a standardized interface across all drivers.
+     */
+    public function __destruct()
+    {
     }
 
     /*
@@ -73,5 +77,4 @@ class BlackHole implements DriverInterface
     {
         return true;
     }
-
 }

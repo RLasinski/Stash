@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -8,10 +7,9 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash\Test\Stubs;
 
-use Stash;
+use Psr\Log\LoggerInterface;
 
 /**
  * LoggerStub is used to test that logging events are being triggered when they should be.
@@ -21,7 +19,7 @@ use Stash;
  *
  * @codeCoverageIgnore
  */
-class LoggerStub
+class LoggerStub implements LoggerInterface
 {
     public $lastContext;
     public $lastLevel;

@@ -8,9 +8,9 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash\Test\Driver;
 
+use Stash\Interfaces\DriverInterface;
 use Stash\Utilities;
 
 /**
@@ -40,9 +40,24 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
                             'test/of/really/long/key/with/lots/of/children/keys' => true
     );
 
+    /**
+     * @var int
+     */
     protected $expiration;
+
+    /**
+     * @var string
+     */
     protected $driverClass;
+
+    /**
+     * @var int
+     */
     protected $startTime;
+
+    /**
+     * @var bool
+     */
     private $setup = false;
 
     public static function tearDownAfterClass()
@@ -55,7 +70,6 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
         if (!$this->setup) {
             $this->startTime = time();
             $this->expiration = $this->startTime + 3600;
-            $driverClass = $this->driverClass;
 
             if (!$this->getFreshDriver()) {
                 $this->markTestSkipped('Driver class unsuited for current environment');
@@ -66,8 +80,14 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @return bool|DriverInterface
+     */
     protected function getFreshDriver()
     {
+        /**
+         * @var DriverInterface $driverClass
+         */
         $driverClass = $this->driverClass;
         $options = $this->getOptions();
 
@@ -82,11 +102,10 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
 
     public function testConstructor()
     {
-        $driverType = $this->driverClass;
-        $options = $this->getOptions();
-        $driver = new $driverType($options);
-        $this->assertTrue(is_a($driver, $driverType), 'Driver is an instance of ' . $driverType);
-        $this->assertTrue(is_a($driver, '\Stash\Interfaces\DriverInterface'), 'Driver implments the Stash\Driver\DriverInterface interface');
+        $driver = new $this->driverClass($this->getOptions());
+
+        $this->assertInstanceOf($this->driverClass, $driver, 'Driver is an instance of ' . $this->driverClass);
+        $this->assertInstanceOf('Stash\Interfaces\DriverInterface', $driver, 'Driver implements the Stash\Driver\DriverInterface interface');
 
         return $driver;
     }
@@ -99,7 +118,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testConstructor
      */
-    public function testStoreData($driver)
+    public function testStoreData(DriverInterface $driver)
     {
         foreach ($this->data as $type => $value) {
             $key = array('base', $type);
@@ -112,7 +131,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testStoreData
      */
-    public function testGetData($driver)
+    public function testGetData(DriverInterface $driver)
     {
         foreach ($this->data as $type => $value) {
             $key = array('base', $type);
@@ -135,7 +154,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testGetData
      */
-    public function testClear($driver)
+    public function testClear(DriverInterface $driver)
     {
         foreach ($this->data as $type => $value) {
             $key = array('base', $type);
@@ -191,7 +210,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testClear
      */
-    public function testPurge($driver)
+    public function testPurge(DriverInterface $driver)
     {
         // We're going to populate this with both stale and fresh data, but we're only checking that the stale data
         // is removed. This is to give drivers the flexibility to introduce their own removal algorithms- our only
@@ -218,7 +237,7 @@ abstract class AbstractDriverTest extends \PHPUnit_Framework_TestCase
     /**
      * @depends testPurge
      */
-    public function testDestructor($driver)
+    public function testDestructor(DriverInterface $driver)
     {
         $driver->__destruct();
         $driver=null;

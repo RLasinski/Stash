@@ -19,7 +19,7 @@ use Stash\Driver\BlackHole;
 class BlackHoleTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * @var Stash\Driver\BlackHole
+     * @var \Stash\Driver\BlackHole
      */
     private $driver = null;
 

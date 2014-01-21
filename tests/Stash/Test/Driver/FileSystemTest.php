@@ -33,7 +33,7 @@ class FileSystemTest extends AbstractDriverTest
     }
 
     /**
-     * @expectedException Stash\Exception\RuntimeException
+     * @expectedException \Stash\Exception\RuntimeException
      */
     public function testOptionKeyHashFunctionException()
     {

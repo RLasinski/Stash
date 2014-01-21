@@ -11,6 +11,8 @@
 
 namespace Stash\Interfaces;
 
+use Stash\Exception\RuntimeException;
+
 /**
  * Stash Drivers are the engines behind the Stash library. These classes handle the low level operations- retrieving,
  * storing and deleting items in the persistant cache pool. By creating new drivers developers can add new caching
@@ -48,8 +50,12 @@ interface DriverInterface
      * authentication information, as an example, should get them here.
      *
      * @param array $options
+     *
+     * @throws RuntimeException
      */
     public function __construct(array $options = array());
+
+    public function __destruct();
 
     /**
      * Returns the previously stored data as well as it's expiration date in an associative array. This array contains
@@ -57,6 +63,9 @@ interface DriverInterface
      * storeData.
      *
      * @param  array $key
+     *
+     * @throws RuntimeException
+     *
      * @return array
      */
     public function getData($key);
@@ -78,6 +87,9 @@ interface DriverInterface
      * @param  array $key
      * @param  array $data
      * @param  int   $expiration
+     *
+     * @throws RuntimeException
+     *
      * @return bool
      */
     public function storeData($key, $data, $expiration);
@@ -87,6 +99,9 @@ interface DriverInterface
      * cleared.
      *
      * @param  null|array $key
+     *
+     * @throws RuntimeException
+     *
      * @return bool
      */
     public function clear($key = null);
@@ -97,6 +112,8 @@ interface DriverInterface
      * for other clean up operations that the specific engine needs to handle. This function is generally called outside
      * of user requests as part of a maintenance check, so it is okay if the code in this function takes some time to
      * run,
+     *
+     * @throws RuntimeException
      *
      * @return bool
      */

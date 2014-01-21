@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -10,6 +9,8 @@
  */
 
 namespace Stash;
+
+use Stash\Interfaces\DriverInterface;
 
 /**
  * Drivers contains various functions used to organize Driver classes that are available in the system.
@@ -43,6 +44,8 @@ class Drivers
     public static function getDrivers()
     {
         $availableDrivers = array();
+
+        /** @var DriverInterface $class */
         foreach (self::$drivers as $name => $class) {
             if (!class_exists($class)) {
                 continue;
@@ -64,11 +67,20 @@ class Drivers
         return $availableDrivers;
     }
 
+    /**
+     * @param string $name
+     * @param string $class
+     */
     public static function registerDriver($name, $class)
     {
         self::$drivers[$name] = $class;
     }
 
+    /**
+     * @param string $name
+     *
+     * @return bool|string
+     */
     public static function getDriverClass($name)
     {
         if (!isset(self::$drivers[$name])) {

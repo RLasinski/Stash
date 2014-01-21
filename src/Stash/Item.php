@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -8,9 +7,9 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash;
 
+use Psr\Log\LoggerInterface;
 use Stash\Exception\Exception;
 use Stash\Interfaces\DriverInterface;
 use Stash\Interfaces\ItemInterface;
@@ -90,7 +89,7 @@ class Item implements ItemInterface
      * The cacheDriver being used by the system. While this class handles all of the higher functions, it's the cache
      * driver here that handles all of the storage/retrieval functionality. This value is set by the constructor.
      *
-     * @var Stash\Interfaces\DriverInterface
+     * @var \Stash\Interfaces\DriverInterface
      */
     protected $driver;
 
@@ -98,7 +97,7 @@ class Item implements ItemInterface
      * If set various then errors and exceptions will get passed to the PSR Compliant logging library. This
      * can be set using the setLogger() function in this class.
      *
-     * @var Psr\Log\LoggerInterface
+     * @var \Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -114,8 +113,10 @@ class Item implements ItemInterface
      * This constructor is an internal function used by the Pool object when
      * creating new Item objects. It should not be called directly.
      *
-     * @internal
-     * @param DriverInterface If no driver is passed the cache is set to script time only.
+     * @param Interfaces\DriverInterface $driver
+     * @param                            $key
+     *
+     * @internal param \Stash\If $DriverInterface no driver is passed the cache is set to script time only.
      */
     public function __construct(DriverInterface $driver, $key)
     {
@@ -157,12 +158,12 @@ class Item implements ItemInterface
     {
         try {
             return $this->executeClear();
+
         } catch (Exception $e) {
             $this->logException('Clearing cache caused exception.', $e);
             $this->disable();
-
-            return false;
         }
+        return false;
     }
 
     private function executeClear()
@@ -181,18 +182,22 @@ class Item implements ItemInterface
      * function after call this one. If no value is stored at all then this
      * function will return null.
      *
+     * @param int  $invalidation
+     * @param null $arg
+     * @param null $arg2
+     *
      * @return mixed|null
      */
     public function get($invalidation = 0, $arg = null, $arg2 = null)
     {
         try {
             return $this->executeGet($invalidation, $arg, $arg2);
+
         } catch (Exception $e) {
             $this->logException('Retrieving from cache caused exception.', $e);
             $this->disable();
-
-            return null;
         }
+        return null;
     }
 
     private function executeGet($invalidation, $arg, $arg2)
@@ -253,6 +258,8 @@ class Item implements ItemInterface
      * Enables stampede protection by marking this specific instance of the Item
      * as the one regenerating the cache.
      *
+     * @param null $ttl
+     *
      * @return bool
      */
     public function lock($ttl = null)
@@ -273,7 +280,14 @@ class Item implements ItemInterface
         $spkey = $this->key;
         $spkey[0] = 'sp';
 
-        return $this->driver->storeData($spkey, true, time() + $expiration);
+        try {
+            return $this->driver->storeData($spkey, true, time() + $expiration);
+
+        } catch (Exception $e) {
+            $this->logException('Lock value in cache caused exception.', $e);
+            $this->disable();
+        }
+        return false;
     }
 
     /**
@@ -282,21 +296,27 @@ class Item implements ItemInterface
      * unable to be serialized.
      *
      * @param  mixed             $data bool
-     * @param  int|DateTime|null $ttl  Int is time (seconds), DateTime a future expiration date
+     * @param  int|\DateTime|null $ttl  Int is time (seconds), DateTime a future expiration date
      * @return bool              Returns whether the object was successfully stored or not.
      */
     public function set($data, $ttl = null)
     {
         try {
             return $this->executeSet($data, $ttl);
+
         } catch (Exception $e) {
             $this->logException('Setting value in cache caused exception.', $e);
             $this->disable();
-
-            return false;
         }
+        return false;
     }
 
+    /**
+     * @param $data
+     * @param $time
+     *
+     * @return bool
+     */
     private function executeSet($data, $time)
     {
         if ($this->isDisabled()) {
@@ -342,6 +362,8 @@ class Item implements ItemInterface
      * Extends the expiration on the current cached item. For some engines this
      * can be faster than storing the item again.
      *
+     * @param null $ttl
+     *
      * @return bool
      */
     public function extend($ttl = null)
@@ -366,28 +388,35 @@ class Item implements ItemInterface
     }
 
     /**
-     * Return true if caching is disabled
+     * @param LoggerInterface $logger
+     *
+     * @return null|void
      */
-    public function setLogger($logger)
+    public function setLogger(LoggerInterface $logger)
     {
         $this->logger = $logger;
     }
 
+    /**
+     * @param $message
+     * @param $exception
+     *
+     * @return bool
+     */
     protected function logException($message, $exception)
     {
-        if(!isset($this->logger))
-
+        if (!isset($this->logger)) {
             return false;
+        }
 
-        $this->logger->critical($message,
-                                array('exception' => $exception,
-                                      'key' => $this->keyString));
-
+        $this->logger->critical($message, array('exception' => $exception, 'key' => $this->keyString));
         return true;
     }
 
     /**
      * Returns true if another Item is currently recalculating the cache.
+     *
+     * @param $key
      *
      * @return bool
      */
@@ -430,10 +459,13 @@ class Item implements ItemInterface
      * This function has the ability to change the isHit property as well as the record passed.
      *
      * @param array $validation
-     * @param array $&record
+     * @param       $record
      */
     protected function validateRecord($validation, &$record)
     {
+        $invalidation = 0;
+        $arg = null;
+
         if (is_array($validation)) {
             $argArray = $validation;
             $invalidation = isset($argArray[0]) ? $argArray[0] : 0;
@@ -453,7 +485,7 @@ class Item implements ItemInterface
             $this->isHit = true;
 
             if ($invalidation == self::SP_PRECOMPUTE) {
-                $time = isset($arg) && is_numeric($arg) ? $arg : self::$defaults['precompute_time'];
+                $time = isset($arg) && is_numeric($arg) ? $arg : $this->defaults['precompute_time'];
 
                 // If stampede control is on it means another cache is already processing, so we return
                 // true for the hit.
@@ -485,8 +517,8 @@ class Item implements ItemInterface
                 break;
 
             case self::SP_SLEEP:
-                $time = isset($arg) && is_numeric($arg) ? $arg : self::$defaults['sleep_time'];
-                $attempts = isset($arg2) && is_numeric($arg2) ? $arg2 : self::$defaults['sleep_attempts'];
+                $time = isset($arg) && is_numeric($arg) ? $arg : $this->defaults['sleep_time'];
+                $attempts = isset($arg2) && is_numeric($arg2) ? $arg2 : $this->defaults['sleep_attempts'];
 
                 $ptime = $time * 1000;
 

@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -8,10 +7,8 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash\Driver;
 
-use Stash;
 use Stash\Exception\RuntimeException;
 use Stash\Interfaces\DriverInterface;
 
@@ -25,13 +22,17 @@ use Stash\Interfaces\DriverInterface;
  */
 class Composite implements DriverInterface
 {
-
+    /**
+     * @var DriverInterface[]
+     */
     protected $drivers = array();
 
     /**
      * This function should takes an array which is used to pass option values to the driver.
      *
      * @param array $options
+     *
+     * @throws \Stash\Exception\RuntimeException
      */
     public function __construct(array $options = array())
     {
@@ -54,7 +55,6 @@ class Composite implements DriverInterface
 
     /**
      * Empty destructor to maintain a standardized interface across all drivers.
-     *
      */
     public function __destruct()
     {
@@ -66,20 +66,25 @@ class Composite implements DriverInterface
      * main script is trying to store.
      *
      * @param $key
+     *
      * @return array
      */
     public function getData($key)
     {
-        $failedDrivers = array();
         $return = false;
+
+        /** @var DriverInterface[] $failedDrivers */
+        $failedDrivers = array();
+
         foreach ($this->drivers as $driver) {
             if ($return = $driver->getData($key)) {
+
                 $failedDrivers = array_reverse($failedDrivers);
                 foreach ($failedDrivers as $failedDriver) {
                     $failedDriver->storeData($key, $return['data'], $return['expiration']);
                 }
-
                 break;
+
             } else {
                 $failedDrivers[] = $driver;
             }
@@ -101,8 +106,10 @@ class Composite implements DriverInterface
      */
     public function storeData($key, $data, $expiration)
     {
+        /** @var DriverInterface[] $drivers */
         $drivers = array_reverse($this->drivers);
         $return = true;
+
         foreach ($drivers as $driver) {
             $storeResults = $driver->storeData($key, $data, $expiration);
             $return = $return && $storeResults;
@@ -120,8 +127,10 @@ class Composite implements DriverInterface
      */
     public function clear($key = null)
     {
+        /** @var DriverInterface[] $drivers */
         $drivers = array_reverse($this->drivers);
         $return = true;
+
         foreach ($drivers as $driver) {
             $clearResults = $driver->clear($key);
             $return = $return && $clearResults;
@@ -137,8 +146,10 @@ class Composite implements DriverInterface
      */
     public function purge()
     {
+        /** @var DriverInterface[] $drivers */
         $drivers = array_reverse($this->drivers);
         $return = true;
+
         foreach ($drivers as $driver) {
             $purgeResults = $driver->purge();
             $return = $return && $purgeResults;

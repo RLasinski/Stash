@@ -28,7 +28,7 @@ class Session implements SessionHandlerInterface
      * The Stash\Pool generates the individual cache items corresponding to each
      * session. Basically all persistence is handled by this object.
      *
-     * @var Stash\Pool
+     * @var \Stash\Pool
      */
     protected $pool;
 
@@ -59,7 +59,7 @@ class Session implements SessionHandlerInterface
      * eliminates some boilerplate code from projects while also helping with
      * the differences in php versions.
      *
-     * @param  Stash\Session $handler
+     * @param  \Stash\Session $handler
      * @return bool
      */
     public static function registerHandler(Session $handler)
@@ -98,7 +98,9 @@ class Session implements SessionHandlerInterface
      * drivers or be appropriately namespaced to avoid conflicts with other
      * libraries.
      *
-     * @param Stash\Pool pool
+     * @param Interfaces\PoolInterface|Pool $pool
+     *
+     * @internal param \Stash\Pool $pool
      */
     public function __construct(PoolInterface $pool)
     {

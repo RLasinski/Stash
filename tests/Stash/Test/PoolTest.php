@@ -11,6 +11,7 @@
 
 namespace Stash\Test;
 
+use Stash\Exception\InvalidArgumentException;
 use Stash\Pool;
 use Stash\Driver\Ephemeral;
 

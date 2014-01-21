@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -11,7 +10,6 @@
 
 namespace Stash\Driver;
 
-use Stash;
 use Stash\Interfaces\DriverInterface;
 
 /**
@@ -23,25 +21,42 @@ use Stash\Interfaces\DriverInterface;
  */
 class Ephemeral implements DriverInterface
 {
-
+    /**
+     * @var array
+     */
     protected $store = array();
 
+    /**
+     * @param array $options
+     */
     public function __construct(array $options = array())
     {
-
     }
 
+    /**
+     * Empty destructor to maintain a standardized interface across all drivers.
+     */
     public function __destruct()
     {
-
     }
 
+    /**
+     * @param array $key
+     *
+     * @return array|bool
+     */
     public function getData($key)
     {
         $key = $this->getKeyIndex($key);
+
         return isset($this->store[$key]) ? $this->store[$key] : false;
     }
 
+    /**
+     * @param $key
+     *
+     * @return string
+     */
     protected function getKeyIndex($key)
     {
         $index = '';
@@ -52,6 +67,13 @@ class Ephemeral implements DriverInterface
         return $index;
     }
 
+    /**
+     * @param array $key
+     * @param array $data
+     * @param int   $expiration
+     *
+     * @return bool
+     */
     public function storeData($key, $data, $expiration)
     {
         $this->store[$this->getKeyIndex($key)] = array('data' => $data, 'expiration' => $expiration);
@@ -59,6 +81,11 @@ class Ephemeral implements DriverInterface
         return true;
     }
 
+    /**
+     * @param null $key
+     *
+     * @return bool
+     */
     public function clear($key = null)
     {
         if (!isset($key)) {
@@ -75,6 +102,9 @@ class Ephemeral implements DriverInterface
         return true;
     }
 
+    /**
+     * @return bool
+     */
     public function purge()
     {
         $now = time();
@@ -87,6 +117,9 @@ class Ephemeral implements DriverInterface
         return true;
     }
 
+    /**
+     * @return bool
+     */
     public static function isAvailable()
     {
         return true;

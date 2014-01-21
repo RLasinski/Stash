@@ -10,6 +10,8 @@
 
 namespace Stash\Test\Driver;
 
+use Stash\Driver\Xcache;
+
 include 'Xcache/XcacheMock.php';
 
 class XcacheTest extends AbstractDriverTest
@@ -18,15 +20,19 @@ class XcacheTest extends AbstractDriverTest
 
     public function testConstructor()
     {
-        $driverType = $this->driverClass;
         $options = $this->getOptions();
         $options['namespace'] = 'namespace_test';
         $options['ttl'] = 15;
-        $driver = new $driverType($options);
+
+        $driver = new Xcache($options);
+        $driver->setCommandLineMode(false);
+
+        $this->assertInstanceOf($this->driverClass, $driver, 'Driver is an instance of ' . $this->driverClass);
+        $this->assertInstanceOf('Stash\Interfaces\DriverInterface', $driver, 'Driver implements the Stash\Driver\DriverInterface interface');
 
         $this->assertAttributeEquals('namespace_test', 'namespace', $driver, 'Xcache is setting supplied namespace.');
         $this->assertAttributeEquals(15, 'ttl', $driver, 'Xcache is setting supplied ttl.');
 
-        return parent::testConstructor();
+        return $driver;
     }
 }

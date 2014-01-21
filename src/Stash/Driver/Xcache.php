@@ -7,10 +7,8 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash\Driver;
 
-use Stash;
 use Stash\Exception\RuntimeException;
 use Stash\Interfaces\DriverInterface;
 
@@ -35,6 +33,11 @@ class Xcache implements DriverInterface
     protected $namespace;
 
     /**
+     * @var bool
+     */
+    protected $commandLineMode = false;
+
+    /**
      * @param array $options
      *
      * @throws \Stash\Exception\RuntimeException
@@ -50,14 +53,27 @@ class Xcache implements DriverInterface
         }
 
         $this->namespace = isset($options['namespace']) ? $options['namespace'] : md5(__FILE__);
+        $this->commandLineMode = php_sapi_name() === 'cli';
     }
 
     /**
      * Empty destructor to maintain a standardized interface across all drivers.
-     *
      */
     public function __destruct()
     {
+    }
+
+    /**
+     * Set the {@see $commandLineMode} property.
+     *
+     * @param boolean $commandLineMode
+     *
+     * @return $this Returns the instance of this or a derived class.
+     */
+    public function setCommandLineMode($commandLineMode)
+    {
+        $this->commandLineMode = $commandLineMode;
+        return $this;
     }
 
     /**
@@ -197,6 +213,6 @@ class Xcache implements DriverInterface
      */
     protected function isCommandLineMode()
     {
-        return php_sapi_name() === 'cli';
+        return $this->commandLineMode;
     }
 }

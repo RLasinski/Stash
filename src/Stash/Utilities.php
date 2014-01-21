@@ -117,6 +117,8 @@ class Utilities
      * Deletes a directory and all of its contents.
      *
      * @param  string $file Path to file or directory.
+     *
+     * @throws Exception\RuntimeException
      * @return bool   Returns true on success, false otherwise.
      */
     public static function deleteRecursive($file)

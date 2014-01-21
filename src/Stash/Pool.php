@@ -10,19 +10,18 @@
 
 namespace Stash;
 
+use Psr\Log\LoggerInterface;
 use Stash\Driver\Ephemeral;
 use Stash\Interfaces\DriverInterface;
+use Stash\Interfaces\ItemInterface;
 use Stash\Interfaces\PoolInterface;
 
 /**
- *
- *
  * @package Stash
  * @author  Robert Hafner <tedivm@tedivm.com>
  */
 class Pool implements PoolInterface
 {
-
     /**
      * The cacheDriver being used by the system. While this class handles all of the higher functions, it's the cache
      * driver here that handles all of the storage/retrieval functionality. This value is set by the constructor.
@@ -31,7 +30,9 @@ class Pool implements PoolInterface
      */
     protected $driver;
 
-
+    /**
+     * @var bool
+     */
     protected $isDisabled = false;
 
     /**
@@ -42,8 +43,10 @@ class Pool implements PoolInterface
      */
     protected $logger;
 
+    /**
+     * @var string
+     */
     protected $itemClass = '\Stash\Item';
-
 
     /**
      * The constructor takes a Driver class which is used for persistent
@@ -85,15 +88,8 @@ class Pool implements PoolInterface
     }
 
     /**
-     * Takes the same arguments as the Stash->setupKey() function and returns with a new Stash object. If a driver
-     * has been set for this class then it is used, otherwise the Stash object will be set to use script memory only.
-     *
-     * @example  $cache = $pool->getItem('permissions', 'user', '4', '2');
-     *
-     * @internal param array|string $key , $key, $key...
+     * @return ItemInterface
      * @throws \InvalidArgumentException
-     *
-     * @return \Stash\Interfaces\ItemInterface
      */
     public function getItem()
     {
@@ -123,13 +119,16 @@ class Pool implements PoolInterface
             }
         }
 
+        /** @var ItemInterface $cache */
         $cache = new $this->itemClass($this->driver, $key);
 
-        if($this->isDisabled)
+        if ($this->isDisabled) {
             $cache->disable();
+        }
 
-        if(isset($this->logger))
+        if (isset($this->logger)) {
             $cache->setLogger($this->logger);
+        }
 
         return $cache;
     }
@@ -162,12 +161,13 @@ class Pool implements PoolInterface
      */
     public function flush()
     {
-        if($this->isDisabled)
-
+        if ($this->isDisabled) {
             return false;
+        }
 
         try {
             $results = $this->getDriver()->clear();
+
         } catch (\Exception $e) {
             $this->isDisabled = true;
             $this->logException('Flushing Cache Pool caused exception.', $e);
@@ -191,12 +191,13 @@ class Pool implements PoolInterface
      */
     public function purge()
     {
-        if($this->isDisabled)
-
+        if ($this->isDisabled) {
             return false;
+        }
 
         try {
             $results = $this->getDriver()->purge();
+
         } catch (\Exception $e) {
             $this->isDisabled = true;
             $this->logException('Purging Cache Pool caused exception.', $e);
@@ -218,6 +219,9 @@ class Pool implements PoolInterface
         $this->driver = $driver;
     }
 
+    /**
+     * @return Ephemeral|DriverInterface
+     */
     public function getDriver()
     {
         if(!isset($this->driver))
@@ -227,21 +231,28 @@ class Pool implements PoolInterface
     }
 
     /**
-     * Return true if caching is disabled
+     * @param LoggerInterface $logger
+     *
+     * @return null|void
      */
-    public function setLogger($logger)
+    public function setLogger(LoggerInterface $logger)
     {
         $this->logger = $logger;
     }
 
+    /**
+     * @param $message
+     * @param $exception
+     *
+     * @return bool
+     */
     protected function logException($message, $exception)
     {
-        if(!isset($this->logger))
+        if (!isset($this->logger)) {
             return false;
+        }
 
-        $this->logger->critical($message,
-                                array('exception' => $exception));
-
+        $this->logger->critical($message, array('exception' => $exception));
         return true;
     }
 }

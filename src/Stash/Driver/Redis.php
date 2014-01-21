@@ -7,11 +7,11 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-
 namespace Stash\Driver;
 
-use Stash;
+use Stash\Exception\RuntimeException;
 use Stash\Interfaces\DriverInterface;
+use Stash\Utilities;
 
 /**
  * The Redis driver is used for storing data on a Redis system. This class uses
@@ -38,15 +38,20 @@ class Redis implements DriverInterface
     protected $keyCache = array();
 
     /**
+     * @var array
+     */
+    protected $defaultServer = array('server' => '127.0.0.1', 'port' => '6379', 'ttl' => 0.1);
+
+    /**
      * @param array $options
      *
-     * @throws \RuntimeException
+     * @throws RuntimeException
      */
     public function __construct(array $options = array())
     {
-       if (!self::isAvailable()) {
-           throw new \RuntimeException('Unable to load Redis driver without PhpRedis extension.');
-       }
+        if (!self::isAvailable()) {
+            throw new RuntimeException('Unable to load Redis driver without PhpRedis extension.');
+        }
 
         // Normalize Server Options
         if (isset($options['servers'])) {
@@ -57,7 +62,8 @@ class Redis implements DriverInterface
             unset($options['servers']);
 
         } else {
-            $servers = array(array('server' => '127.0.0.1', 'port' => '6379', 'ttl' => 0.1));
+            // Default options
+            $servers = array($this->defaultServer);
         }
 
         // Merge in default values.
@@ -67,20 +73,23 @@ class Redis implements DriverInterface
         // the RedisArray object. That object acts as a proxy object, meaning
         // most of the class will be the same even after the changes.
         if (count($servers) == 1) {
+
             $server = $servers[0];
             $redis = new \Redis();
 
-            if (isset($server['socket']) && $server['socket']) {
-                $redis->connect($server['socket']);
-            } else {
-                $port = isset($server['port']) ? $server['port'] : 6379;
-                $ttl = isset($server['ttl']) ? $server['ttl'] : 0.1;
-                $redis->connect($server['server'], $port, $ttl);
+            $port = isset($server['port']) ? $server['port'] : 6379;
+            $timeout = isset($server['ttl']) ? $server['ttl'] : 0;
+
+            if (!$redis->connect($server['server'], $port, $timeout)) {
+                throw new RuntimeException(sprintf('Could not connect to: %s:%d, timeout:%d', $server['server'],
+                    $port, $timeout));
             }
 
             // auth - just password
             if (isset($options['password'])) {
-                $redis->auth($options['password']);
+                if (!$redis->auth($options['password'])) {
+                    throw new RuntimeException('Could not authenticate with password');
+                }
             }
 
             $this->redis = $redis;
@@ -101,7 +110,9 @@ class Redis implements DriverInterface
 
         // select database
         if (isset($options['database'])) {
-            $redis->select($options['database']);
+            if (!$redis->select($options['database'])) {
+                throw new RuntimeException(sprintf('Could not select database %d', $options['database']));
+            }
         }
 
         $this->redis = $redis;
@@ -115,11 +126,14 @@ class Redis implements DriverInterface
         try {
             $this->redis->close();
         } catch (\Exception $e) {
+            // do not throw exception in destructor
         }
     }
 
     /**
      * @param  array $key
+     *
+     * @throws \Stash\Exception\RuntimeException
      *
      * @return array
      */
@@ -127,9 +141,10 @@ class Redis implements DriverInterface
     {
         try {
             return unserialize($this->redis->get($this->makeKeyString($key)));
+
         } catch (\Exception $e) {
+            throw new RuntimeException($e->getMessage());
         }
-        return false;
     }
 
     /**
@@ -137,6 +152,7 @@ class Redis implements DriverInterface
      * @param  array $data
      * @param  int   $expiration
      *
+     * @throws \Stash\Exception\RuntimeException
      * @return bool
      */
     public function storeData($key, $data, $expiration)
@@ -145,7 +161,8 @@ class Redis implements DriverInterface
 
         try {
             if (is_null($expiration)) {
-                return $this->redis->setex($this->makeKeyString($key), $store);
+                return $this->redis->set($this->makeKeyString($key), $store);
+
             } else {
                 $ttl = $expiration - time();
 
@@ -157,9 +174,10 @@ class Redis implements DriverInterface
 
                 return $this->redis->set($this->makeKeyString($key), $store, $ttl);
             }
+
         } catch (\Exception $e) {
+            throw new RuntimeException($e->getMessage());
         }
-        return false;
     }
 
     /**
@@ -167,26 +185,38 @@ class Redis implements DriverInterface
      * cleared.
      *
      * @param  null|array $key
+     *
+     * @throws \Stash\Exception\RuntimeException
      * @return bool
      */
     public function clear($key = null)
     {
+        // Flush complete database
         if (is_null($key)) {
-            $this->redis->flushDB();
-            return true;
+            try {
+                return $this->redis->flushDB();
+
+            } catch (\Exception $e) {
+                throw new RuntimeException($e->getMessage());
+            }
         }
 
-        $keyString = $this->makeKeyString($key, true);
-        $keyReal = $this->makeKeyString($key);
-        $this->redis->incr($keyString); // increment index for children items
-        $this->redis->delete($keyReal); // remove direct item.
-        $this->keyCache = array();
+        // Remove specific item
+        try {
+            $keyString = $this->makeKeyString($key, true);
+            $keyReal = $this->makeKeyString($key);
+            $this->redis->incr($keyString); // increment index for children items
+            $this->redis->delete($keyReal); // remove direct item.
+            $this->keyCache = array();
+
+        } catch (\Exception $e) {
+            throw new RuntimeException($e->getMessage());
+        }
 
         return true;
     }
 
     /**
-     *
      * @return bool
      */
     public function purge()
@@ -213,7 +243,7 @@ class Redis implements DriverInterface
     {
         // array(name, sub);
         // a => name, b => sub;
-        $key = \Stash\Utilities::normalizeKeys($key);
+        $key = Utilities::normalizeKeys($key);
         $pathKey = '';
         $keyString = 'cache:::';
 
@@ -241,5 +271,4 @@ class Redis implements DriverInterface
 
         return $path ? $pathKey : md5($keyString);
     }
-
 }

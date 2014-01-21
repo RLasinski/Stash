@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -11,9 +10,10 @@
 
 namespace Stash\Interfaces;
 
-interface ItemInterface
-{
+use Psr\Log\LoggerAwareInterface;
 
+interface ItemInterface extends LoggerAwareInterface
+{
     public function disable();
 
     public function getKey();
@@ -31,6 +31,4 @@ interface ItemInterface
     public function extend($ttl = null);
 
     public function isDisabled();
-
-    public function setLogger($logger);
 }
