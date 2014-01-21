@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -23,18 +22,31 @@ use Stash\Interfaces\DriverInterface;
  */
 class Redis implements DriverInterface
 {
+    /**
+     * @var array
+     */
     protected $defaultOptions = array ();
+
+    /**
+     * @var \Redis|\RedisArray
+     */
     protected $redis;
+
+    /**
+     * @var array
+     */
     protected $keyCache = array();
 
     /**
-     *
      * @param array $options
+     *
+     * @throws \RuntimeException
      */
     public function __construct(array $options = array())
     {
-       if(!self::isAvailable())
+       if (!self::isAvailable()) {
            throw new \RuntimeException('Unable to load Redis driver without PhpRedis extension.');
+       }
 
         // Normalize Server Options
         if (isset($options['servers'])) {
@@ -54,7 +66,6 @@ class Redis implements DriverInterface
         // this will have to be revisited to support multiple servers, using
         // the RedisArray object. That object acts as a proxy object, meaning
         // most of the class will be the same even after the changes.
-
         if (count($servers) == 1) {
             $server = $servers[0];
             $redis = new \Redis();
@@ -68,18 +79,19 @@ class Redis implements DriverInterface
             }
 
             // auth - just password
-            if(isset($options['password']))
+            if (isset($options['password'])) {
                 $redis->auth($options['password']);
+            }
 
             $this->redis = $redis;
 
         } else {
-
             $serverArray = array();
             foreach ($servers as $server) {
                 $serverString = $server['server'];
-                if(isset($server['port']))
+                if (isset($server['port'])) {
                     $serverString .= ':' . $server['port'];
+                }
 
                 $serverArray[] = $serverString;
             }
@@ -88,8 +100,9 @@ class Redis implements DriverInterface
         }
 
         // select database
-        if(isset($options['database']))
+        if (isset($options['database'])) {
             $redis->select($options['database']);
+        }
 
         $this->redis = $redis;
     }
@@ -99,44 +112,54 @@ class Redis implements DriverInterface
      */
     public function __destruct()
     {
-        $this->redis->close();
+        try {
+            $this->redis->close();
+        } catch (\Exception $e) {
+        }
     }
 
     /**
-     *
-     *
      * @param  array $key
+     *
      * @return array
      */
     public function getData($key)
     {
-        return unserialize($this->redis->get($this->makeKeyString($key)));
+        try {
+            return unserialize($this->redis->get($this->makeKeyString($key)));
+        } catch (\Exception $e) {
+        }
+        return false;
     }
 
     /**
-     *
-     *
      * @param  array $key
      * @param  array $data
      * @param  int   $expiration
+     *
      * @return bool
      */
     public function storeData($key, $data, $expiration)
     {
         $store = serialize(array('data' => $data, 'expiration' => $expiration));
-        if (is_null($expiration)) {
-            return $this->redis->setex($this->makeKeyString($key), $store);
-        } else {
-            $ttl = $expiration - time();
 
-            // Prevent us from even passing a negative ttl'd item to redis,
-            // since it will just round up to zero and cache forever.
-            if($ttl < 1)
+        try {
+            if (is_null($expiration)) {
+                return $this->redis->setex($this->makeKeyString($key), $store);
+            } else {
+                $ttl = $expiration - time();
 
-                return true;
+                // Prevent us from even passing a negative ttl'd item to redis,
+                // since it will just round up to zero and cache forever.
+                if ($ttl < 1) {
+                    return true;
+                }
 
-            return $this->redis->set($this->makeKeyString($key), $store, $ttl);
+                return $this->redis->set($this->makeKeyString($key), $store, $ttl);
+            }
+        } catch (\Exception $e) {
         }
+        return false;
     }
 
     /**
@@ -150,7 +173,6 @@ class Redis implements DriverInterface
     {
         if (is_null($key)) {
             $this->redis->flushDB();
-
             return true;
         }
 
@@ -174,8 +196,6 @@ class Redis implements DriverInterface
     }
 
     /**
-     *
-     *
      * @return bool
      */
     public static function isAvailable()
@@ -183,15 +203,20 @@ class Redis implements DriverInterface
         return class_exists('Redis', false);
     }
 
-
+    /**
+     * @param      $key
+     * @param bool $path
+     *
+     * @return string
+     */
     protected function makeKeyString($key, $path = false)
     {
         // array(name, sub);
         // a => name, b => sub;
-
         $key = \Stash\Utilities::normalizeKeys($key);
-
+        $pathKey = '';
         $keyString = 'cache:::';
+
         foreach ($key as $name) {
             //a. cache:::name
             //b. cache:::name0:::sub

@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of the Stash package.
  *
@@ -24,5 +23,4 @@ if (!file_exists($filename)) {
     $filename = __DIR__ .'/../autoload.php';
 }
 
-$loader = require_once $filename;
-$loader->add('Stash\\Test', __DIR__);
+require_once $filename;
