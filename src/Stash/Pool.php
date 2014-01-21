@@ -68,6 +68,8 @@ class Pool implements PoolInterface
      * Item objects.
      *
      * @param string $class
+     *
+     * @throws \InvalidArgumentException
      */
     public function setItemClass($class)
     {
@@ -88,8 +90,9 @@ class Pool implements PoolInterface
      *
      * @example  $cache = $pool->getItem('permissions', 'user', '4', '2');
      *
-     * @throws \InvalidArgumentException
      * @internal param array|string $key , $key, $key...
+     * @throws \InvalidArgumentException
+     *
      * @return \Stash\Interfaces\ItemInterface
      */
     public function getItem()
